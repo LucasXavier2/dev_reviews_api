@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using DevReviews.API.Persistence;
+using DevReviews.API.Persistence.Repositories;
 using DevReviews.API.Profiles;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
@@ -33,6 +34,7 @@ namespace DevReviews.API
 
             services.AddDbContext<DevReviewsDbContext>(o => o.UseSqlServer(connectionString));
 
+            services.AddScoped<IProductRepository, ProductRepository>();
             
             services.AddAutoMapper(typeof(ProductProfile));
 
