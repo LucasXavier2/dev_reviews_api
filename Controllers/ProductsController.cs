@@ -1,10 +1,12 @@
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using AutoMapper;
 using DevReviews.API.Entities;
 using DevReviews.API.Models;
 using DevReviews.API.Persistence;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 
 namespace DevReviews.Controllers
 {
@@ -33,9 +35,12 @@ namespace DevReviews.Controllers
         }
 
         [HttpGet("{id}")]
-        public IActionResult GetById(int id)
+        public async Task<IActionResult> GetById(int id)
         {
-            var product = _dbContext.Products.SingleOrDefault(p => p.Id == id);
+            var product = await _dbContext
+                .Products
+                .Include(p => p.Reviews)
+                .SingleOrDefaultAsync(p => p.Id == id);
 
             if (product == null)
             {
@@ -62,25 +67,25 @@ namespace DevReviews.Controllers
         }
 
         [HttpPost]
-        public IActionResult Post(AddProductInputModel model)
+        public async Task<IActionResult> Post(AddProductInputModel model)
         {
-            //se tiver erros de validação, retornar badrequest
-
             var product = new Product(model.Title, model.Description, model.Price);
 
-            _dbContext.Products.Add(product);
+            await _dbContext.Products.AddAsync(product);
+            await _dbContext.SaveChangesAsync();
+
             return CreatedAtAction(nameof(GetById), new { id = product.Id }, model);
         }
 
         [HttpPut("{id}")]
-        public IActionResult Put(int id, UpdateProductInputModel model)
+        public async Task<IActionResult> Put(int id, UpdateProductInputModel model)
         {
-            if (model.Description.Length > 50) //melhorar validação dps
+            if (model.Description.Length > 50)
             {
                 return BadRequest();
             }
 
-            var product = _dbContext.Products.SingleOrDefault(p => p.Id == id);
+            var product = await _dbContext.Products.SingleOrDefaultAsync(p => p.Id == id);
 
             if (product == null)
             {
@@ -88,6 +93,10 @@ namespace DevReviews.Controllers
             }
 
             product.Update(model.Description, model.Price);
+
+            // _dbContext.Products.Update(product);
+            await _dbContext.SaveChangesAsync();
+
             return NoContent();
         }
     }

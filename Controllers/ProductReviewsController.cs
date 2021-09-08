@@ -1,5 +1,11 @@
+using System.Linq;
+using System.Threading.Tasks;
+using AutoMapper;
+using DevReviews.API.Entities;
 using DevReviews.API.Models;
+using DevReviews.API.Persistence;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 
 namespace DevReviews.Controllers 
 {
@@ -7,18 +13,39 @@ namespace DevReviews.Controllers
     [Route("api/products/{productId}/[controller]")]
     public class ProductReviewsController : ControllerBase
     {
-        [HttpGet("{id}")]
-        public IActionResult GetById(int id) 
+        private readonly DevReviewsDbContext _dbContext;
+        private readonly IMapper _mapper;
+
+        public ProductReviewsController(DevReviewsDbContext dbContext, IMapper mapper)
         {
-            //se não existir id especificado, retornar notfound.
+            _dbContext = dbContext;
+            _mapper = mapper;
+        }
+
+        [HttpGet("{id}")]
+        public async Task<IActionResult> GetById(int id) 
+        {
+            var productReview = await _dbContext.ProductReviews.SingleOrDefaultAsync(p => p.Id == id);
+
+            if (productReview == null) 
+            {
+                return NotFound();
+            }
+
+            var productReviewDetails = _mapper.Map<ProductReviewDetailsViewModel>(productReview);
+
             return Ok();
         }
 
         [HttpPost]
-        public IActionResult Post(int productId, AddProductReviewInputModel model) 
+        public async Task<IActionResult> Post(int productId, AddProductReviewInputModel model) 
         {
-            //se tiver erros de validação, retornar badrequest
-            return CreatedAtAction(nameof(GetById), new { id = 1, productId = 2}, model);
+            var productReview = new ProductReview(model.Author, model.Rating, model.Comments, productId);
+
+            await _dbContext.ProductReviews.AddAsync(productReview);
+            await _dbContext.SaveChangesAsync();
+
+            return CreatedAtAction(nameof(GetById), new { id = productReview.Id, productId = productId}, model);
         }
     }
 }
